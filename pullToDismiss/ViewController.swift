@@ -11,7 +11,6 @@ import UIKit
 class ViewController: UIViewController, UINavigationControllerDelegate, UIViewControllerTransitioningDelegate {
     private var interactor = DismissInteractor()
     private var customTransition = ControllerAnimatedTransitioning()
-    weak var pushedController: PushedViewController?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -27,8 +26,17 @@ class ViewController: UIViewController, UINavigationControllerDelegate, UIViewCo
         let controller = PushedViewController(nibName: "PushedViewController", bundle: nil)
         controller.interactor = interactor
         controller.transitioningDelegate = self
-        pushedController = controller
+        controller.modalPresentationStyle = .overCurrentContext
+        
+        /* Define P2D method */
+        //customTransition.pullToDismissMethod = .dismiss
+        //interactor.pullToDismissMethod = .dismiss
+        //self.present(controller, animated: true, completion: nil)
+        
+        customTransition.pullToDismissMethod = .pop
+        interactor.pullToDismissMethod = .pop
         self.navigationController?.pushViewController(controller, animated: true)
+
     }
  
     func navigationController(_ navigationController: UINavigationController, animationControllerFor operation: UINavigationController.Operation, from fromVC: UIViewController, to toVC: UIViewController) -> UIViewControllerAnimatedTransitioning? {
@@ -41,6 +49,21 @@ class ViewController: UIViewController, UINavigationControllerDelegate, UIViewCo
     }
     
     func navigationController(_ navigationController: UINavigationController, interactionControllerFor animationController: UIViewControllerAnimatedTransitioning) -> UIViewControllerInteractiveTransitioning? {
+        return interactor.hasStarted ? interactor : nil
+    }
+    
+    func animationController(forDismissed dismissed: UIViewController)
+            -> UIViewControllerAnimatedTransitioning? {
+        if interactor.hasStarted {
+            customTransition.animationDirection = interactor.animationDirection
+        } else {
+            return nil
+        }
+        return customTransition
+    }
+
+    func interactionControllerForDismissal(using animator: UIViewControllerAnimatedTransitioning)
+            -> UIViewControllerInteractiveTransitioning? {
         return interactor.hasStarted ? interactor : nil
     }
 }

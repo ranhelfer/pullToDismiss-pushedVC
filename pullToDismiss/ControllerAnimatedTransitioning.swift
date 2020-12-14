@@ -42,7 +42,7 @@ public class DismissInteractor: UIPercentDrivenInteractiveTransition {
     /* not owned varibales so we can spare code duplications at the different view controllers */
     private weak var scrollView: UIScrollView?
     private weak var viewController: UIViewController?
-    
+
     /* Pull to dismiss gesture Threshold */
     let shouldFinishPullToDismissThreshold = CGFloat(0.4)
     
@@ -56,12 +56,14 @@ public class DismissInteractor: UIPercentDrivenInteractiveTransition {
                       viewController: UIViewController) {
         self.scrollView = scrollView
         self.viewController = viewController
-        
+
         hasStarted = false
         animationDirection = .down
         
         if let scrollView = scrollView {
             scrollView.panGestureRecognizer.addTarget(self, action: #selector(handleGesture(_:)))
+        } else {
+            viewController.view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(handleGesture(_:))))
         }
     }
         
@@ -71,7 +73,7 @@ public class DismissInteractor: UIPercentDrivenInteractiveTransition {
             viewController?.navigationController?.popViewController(animated: true)
             break
         case .dismiss:
-            viewController?.navigationController?.dismiss(animated: true, completion: nil)
+            viewController?.presentingViewController?.dismiss(animated: true, completion: nil)
         }
     }
     
@@ -109,6 +111,15 @@ public class DismissInteractor: UIPercentDrivenInteractiveTransition {
                 } else {
                     return
                 }
+            }
+        } else {
+            translation = sender.translation(in: sender.view)
+            verticalMovement = -translation.y / (sender.view?.bounds.height ?? 1)
+            print("vertical movement \(verticalMovement)")
+            if verticalMovement > 0 {
+                animationDirection = .up
+            } else {
+                animationDirection = .down
             }
         }
         
@@ -154,7 +165,8 @@ public class ControllerAnimatedTransitioning: NSObject, UIViewControllerAnimated
     
     public var animationDirection: AnimationDirection = .up
     private let transitionTime = TimeInterval(1.0)
-    
+    public var pullToDismissMethod: PullToDismissMethod = .pop
+
     public func transitionDuration(using transitionContext: UIViewControllerContextTransitioning?) -> TimeInterval {
         return transitionTime
     }
@@ -168,7 +180,11 @@ public class ControllerAnimatedTransitioning: NSObject, UIViewControllerAnimated
         }
         
         let fromVCInitialFrame = fromVC.view.frame
-        transitionContext.containerView.insertSubview(toVC.view, belowSubview: fromVC.view)
+        
+        if pullToDismissMethod == .pop {
+            transitionContext.containerView.insertSubview(toVC.view, belowSubview: fromVC.view)
+        }
+        
         let finalFrame = frameForAnimation()
         toVC.view.alpha = 0.6
         
